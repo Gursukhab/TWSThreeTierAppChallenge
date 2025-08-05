@@ -1,0 +1,108 @@
+Jenkins Pipeline for my app
+
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        ECR_REGISTRY = '949908266326.dkr.ecr.us-east-1.amazonaws.com'
+        FRONTEND_REPO = 'sukhab-app'
+        BACKEND_REPO = 'backend-app'
+        IMAGE_TAG = "latest"
+        NAMESPACE = "three-tier"
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                git 'https://github.com/Gursukhab/TWSThreeTierAppChallenge.git'
+            }
+        }
+
+        stage('Build and Push Frontend Image') {
+            steps {
+                dir('Application-code/frontend') {
+                    sh "docker build -t ${FRONTEND_REPO}:${IMAGE_TAG} ."
+                    sh "docker tag ${FRONTEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}"
+                    sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 949908266326.dkr.ecr.us-east-1.amazonaws.com"
+                    sh "docker push ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Build and Push Backend Image') {
+            steps {
+                dir('Application-code/backend/') {
+                    sh "docker build -t ${BACKEND_REPO}:${IMAGE_TAG} ."
+                    sh "docker tag ${BACKEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}"
+                    sh "docker push ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Update Deployment YAMLs with Image') {
+            steps {
+                // Replace backend image
+                sh """
+                sed -i 's|image:.*|image: ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/backend/deployment.yaml
+                """
+
+                // Replace frontend image
+                sh """
+                sed -i 's|image:.*|image: ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/frontend/deployment.yaml
+                """
+            }
+        }
+
+        stage('Create Namespace') {
+            steps {
+                sh """
+                kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
+                """
+            }
+        }
+
+       stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Database deployment
+                    dir('Kubernetes-Manifests-file/database') {
+                        sh '''
+                            kubectl apply -f secrets.yaml
+                            kubectl apply -f pv.yaml
+                            kubectl apply -f pvc.yaml
+                            kubectl apply -f service.yaml
+                            kubectl apply -f deployment.yaml
+                        '''
+                    }
+
+                    // Backend deployment
+                    dir('Kubernetes-Manifests-file/backend') {
+                        sh '''
+                            kubectl apply -f service.yaml
+                            kubectl apply -f deployment.yaml
+                        '''
+                    }
+
+                    // Frontend deployment
+                    dir('Kubernetes-Manifests-file/frontend') {
+                        sh '''
+                            kubectl apply -f service.yaml
+                            kubectl apply -f deployment.yaml
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Successfully deployed everything!'
+        }
+        failure {
+            echo '❌ Pipeline failed. Check logs.'
+        }
+    }
+}
