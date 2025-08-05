@@ -16,7 +16,8 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/Gursukhab/TWSThreeTierAppChallenge.git'
+                echo "Clonning the repo"
+                git url: "https://github.com/Gursukhab/TWSThreeTierAppChallenge.git", branch: "main"
             }
         }
 
