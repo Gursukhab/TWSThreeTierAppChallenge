@@ -21,7 +21,7 @@ pipeline {
 
         stage('Build and Push Frontend Image') {
             steps {
-                dir('Application-code/frontend/') {
+                dir('Application-code/frontend') {
                     sh "docker build -t ${FRONTEND_REPO}:${IMAGE_TAG} ."
                     sh "docker tag ${FRONTEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}"
                     sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 949908266326.dkr.ecr.us-east-1.amazonaws.com"
