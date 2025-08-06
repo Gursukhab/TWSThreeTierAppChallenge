@@ -82,7 +82,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    dir('Kubernetes-Manifests-file/database') {
+                    dir('Kubernetes-Manifests-file/Database') {
                         sh '''
                             kubectl apply -f secrets.yaml
                             kubectl apply -f pv.yaml
@@ -92,14 +92,14 @@ pipeline {
                         '''
                     }
 
-                    dir('Kubernetes-Manifests-file/backend') {
+                    dir('Kubernetes-Manifests-file/Backend') {
                         sh '''
                             kubectl apply -f service.yaml
                             kubectl apply -f deployment.yaml
                         '''
                     }
 
-                    dir('Kubernetes-Manifests-file/frontend') {
+                    dir('Kubernetes-Manifests-file/Frontend') {
                         sh '''
                             kubectl apply -f service.yaml
                             kubectl apply -f deployment.yaml
