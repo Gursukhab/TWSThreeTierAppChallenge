@@ -14,18 +14,38 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                echo "Clonning the repo"
+                echo "🔄 Cloning the repo"
                 git url: "https://github.com/Gursukhab/TWSThreeTierAppChallenge.git", branch: "main"
+            }
+        }
+
+        stage('Login to AWS ECR') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'aws-ecr-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh '''
+                        mkdir -p ~/.aws
+
+                        echo "[default]" > ~/.aws/credentials
+                        echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+                        echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+
+                        echo "[default]" > ~/.aws/config
+                        echo "region=$AWS_REGION" >> ~/.aws/config
+
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+                    '''
+                }
             }
         }
 
         stage('Build and Push Frontend Image') {
             steps {
                 dir('Application-Code/frontend') {
-                    sh "docker build -t ${FRONTEND_REPO}:${IMAGE_TAG} ."
-                    sh "docker tag ${FRONTEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}"
-                    sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 949908266326.dkr.ecr.us-east-1.amazonaws.com"
-                    sh "docker push ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}"
+                    sh """
+                        docker build -t ${FRONTEND_REPO}:${IMAGE_TAG} .
+                        docker tag ${FRONTEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}
+                        docker push ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}
+                    """
                 }
             }
         }
@@ -33,23 +53,20 @@ pipeline {
         stage('Build and Push Backend Image') {
             steps {
                 dir('Application-code/backend/') {
-                    sh "docker build -t ${BACKEND_REPO}:${IMAGE_TAG} ."
-                    sh "docker tag ${BACKEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}"
-                    sh "docker push ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}"
+                    sh """
+                        docker build -t ${BACKEND_REPO}:${IMAGE_TAG} .
+                        docker tag ${BACKEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}
+                        docker push ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}
+                    """
                 }
             }
         }
 
         stage('Update Deployment YAMLs with Image') {
             steps {
-                // Replace backend image
                 sh """
-                sed -i 's|image:.*|image: ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/backend/deployment.yaml
-                """
-
-                // Replace frontend image
-                sh """
-                sed -i 's|image:.*|image: ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/frontend/deployment.yaml
+                    sed -i 's|image:.*|image: ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/backend/deployment.yaml
+                    sed -i 's|image:.*|image: ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/frontend/deployment.yaml
                 """
             }
         }
@@ -57,15 +74,14 @@ pipeline {
         stage('Create Namespace') {
             steps {
                 sh """
-                kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
+                    kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
                 """
             }
         }
 
-       stage('Deploy to Kubernetes') {
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // Database deployment
                     dir('Kubernetes-Manifests-file/database') {
                         sh '''
                             kubectl apply -f secrets.yaml
@@ -76,7 +92,6 @@ pipeline {
                         '''
                     }
 
-                    // Backend deployment
                     dir('Kubernetes-Manifests-file/backend') {
                         sh '''
                             kubectl apply -f service.yaml
@@ -84,7 +99,6 @@ pipeline {
                         '''
                     }
 
-                    // Frontend deployment
                     dir('Kubernetes-Manifests-file/frontend') {
                         sh '''
                             kubectl apply -f service.yaml
