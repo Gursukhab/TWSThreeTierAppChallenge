@@ -65,8 +65,8 @@ pipeline {
         stage('Update Deployment YAMLs with Image') {
             steps {
                 sh """
-                    sed -i 's|image:.*|image: ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/backend/deployment.yaml
-                    sed -i 's|image:.*|image: ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/frontend/deployment.yaml
+                    sed -i 's|image:.*|image: ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/Backend/deployment.yaml
+                    sed -i 's|image:.*|image: ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}|' Kubernetes-Manifests-file/Frontend/deployment.yaml
                 """
             }
         }
