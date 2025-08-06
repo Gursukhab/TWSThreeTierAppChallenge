@@ -52,7 +52,7 @@ pipeline {
 
         stage('Build and Push Backend Image') {
             steps {
-                dir('Application-code/backend/') {
+                dir('Application-Code/backend/') {
                     sh """
                         docker build -t ${BACKEND_REPO}:${IMAGE_TAG} .
                         docker tag ${BACKEND_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}
