@@ -4,7 +4,7 @@ pipeline {
     environment {
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '949908266326.dkr.ecr.us-east-1.amazonaws.com'
-        FRONTEND_REPO = 'sukhab-app'
+        FRONTEND_REPO = 'sukhab_app'
         BACKEND_REPO = 'backend-app'
         IMAGE_TAG = "latest"
         NAMESPACE = "three-tier"
