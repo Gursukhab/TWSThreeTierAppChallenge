@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        sonarScanner 'SonarScanner'  // ✅ Use the tool name you added in Global Tool Config
+    }
+
     environment {
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '949908266326.dkr.ecr.us-east-1.amazonaws.com'
@@ -8,6 +12,8 @@ pipeline {
         BACKEND_REPO = 'backend-app'
         IMAGE_TAG = "latest"
         NAMESPACE = "three-tier"
+        SONAR_PROJECT_KEY = "sukhab-backend"
+        SONAR_TOKEN = credentials('sonarqube-token')  // ✅ Add your SonarQube token credentials ID here
     }
 
     stages {
@@ -18,6 +24,31 @@ pipeline {
                 git url: "https://github.com/Gursukhab/TWSThreeTierAppChallenge.git", branch: "main"
             }
         }
+
+        // ✅ NEW STAGE
+        stage('SonarQube Analysis') {
+            steps {
+                dir('Application-Code/backend') {
+                    withSonarQubeEnv('MySonarQube') {
+                        sh """
+                            sonar-scanner \
+                              -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+                              -Dsonar.sources=. \
+                              -Dsonar.host.url=http://localhost:9000 \
+                              -Dsonar.login=$SONAR_TOKEN
+                        """
+                    }
+                }
+            }
+        }
+
+stage('Quality Gate') {
+    steps {
+        timeout(time: 2, unit: 'MINUTES') {
+            waitForQualityGate abortPipeline: true
+        }
+    }
+}
 
         stage('Login to AWS ECR') {
             steps {
