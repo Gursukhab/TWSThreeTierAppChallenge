@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        sonarScanner 'SonarScanner'  // ✅ Use the tool name you added in Global Tool Config
-    }
-
     environment {
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '949908266326.dkr.ecr.us-east-1.amazonaws.com'
