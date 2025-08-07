@@ -18,6 +18,7 @@ pipeline {
             steps {
                 echo "🔄 Cloning the repo"
                 git url: "https://github.com/Gursukhab/TWSThreeTierAppChallenge.git", branch: "main"
+                echo "code clonned successfully"
             }
         }
 
