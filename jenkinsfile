@@ -9,7 +9,7 @@ pipeline {
         IMAGE_TAG = "latest"
         NAMESPACE = "three-tier"
         SONAR_PROJECT_KEY = "sukhab-backend"
-        SONAR_TOKEN = credentials('sonarqube-token')  // ✅ Add your SonarQube token credentials ID here
+        SONAR_TOKEN = credentials('sonarqube')  // ✅ Add your SonarQube token credentials ID here
     }
 
     stages {
